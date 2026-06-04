@@ -14,11 +14,8 @@
 
 from isaaclab.utils import configclass
 
-from isaaclab_rl.rsl_rl import (
-    RslRlOnPolicyRunnerCfg,
-    RslRlMLPModelCfg,
-    RslRlPpoAlgorithmCfg,
-)
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoAlgorithmCfg
+from LeggedManip_Lab.tasks.manager_based.leggedmanip_lab.config.agents.rsl_rl_compat import RslRlMLPModelCfg
 
 
 @configclass

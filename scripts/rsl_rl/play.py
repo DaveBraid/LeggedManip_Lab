@@ -92,8 +92,13 @@ from isaaclab_rl.rsl_rl import (
     RslRlVecEnvWrapper,
     export_policy_as_jit,
     export_policy_as_onnx,
-    handle_deprecated_rsl_rl_cfg,
 )
+try:
+    from isaaclab_rl.rsl_rl import handle_deprecated_rsl_rl_cfg
+except ImportError:
+    def handle_deprecated_rsl_rl_cfg(agent_cfg: RslRlBaseRunnerCfg, installed_version: str) -> RslRlBaseRunnerCfg:
+        """Keep compatibility with IsaacLab versions that do not expose this helper."""
+        return agent_cfg
 from isaaclab_rl.utils.pretrained_checkpoint import get_published_pretrained_checkpoint
 
 import isaaclab_tasks  # noqa: F401
@@ -101,6 +106,34 @@ from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import LeggedManip_Lab.tasks  # noqa: F401
+
+
+def _runner_cfg_to_rsl_rl5_dict(agent_cfg: RslRlBaseRunnerCfg) -> dict:
+    """Convert IsaacLab v2.3.x runner cfg dictionaries for rsl_rl 5.x when needed."""
+    cfg = agent_cfg.to_dict()
+    if "actor" in cfg or "policy" not in cfg:
+        return cfg
+
+    policy_cfg = cfg.pop("policy")
+    cfg["obs_groups"] = {"actor": ["policy"], "critic": ["critic"]}
+    cfg["actor"] = {
+        "class_name": "MLPModel",
+        "hidden_dims": policy_cfg["actor_hidden_dims"],
+        "activation": policy_cfg["activation"],
+        "obs_normalization": policy_cfg["actor_obs_normalization"],
+        "distribution_cfg": {
+            "class_name": "GaussianDistribution",
+            "init_std": policy_cfg["init_noise_std"],
+            "std_type": policy_cfg.get("noise_std_type", "scalar"),
+        },
+    }
+    cfg["critic"] = {
+        "class_name": "MLPModel",
+        "hidden_dims": policy_cfg["critic_hidden_dims"],
+        "activation": policy_cfg["activation"],
+        "obs_normalization": policy_cfg["critic_obs_normalization"],
+    }
+    return cfg
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -165,10 +198,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
+    runner_cfg = _runner_cfg_to_rsl_rl5_dict(agent_cfg)
     if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        runner = OnPolicyRunner(env, runner_cfg, log_dir=None, device=agent_cfg.device)
     elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        runner = DistillationRunner(env, runner_cfg, log_dir=None, device=agent_cfg.device)
     else:
         raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
     runner.load(resume_path)
