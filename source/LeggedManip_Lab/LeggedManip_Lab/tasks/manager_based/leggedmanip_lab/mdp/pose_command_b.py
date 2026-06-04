@@ -28,6 +28,7 @@ from isaaclab.utils.math import (
     compute_pose_error,
     quat_apply,
     quat_from_euler_xyz,
+    quat_mul,
     quat_unique,
 )
 
@@ -72,7 +73,8 @@ class UniformBodyPoseCommand(CommandTerm):
         self.robot: Articulation = env.scene[cfg.asset_name]
         self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
         self.root_idx = self.robot.find_bodies(cfg.root_name)[0][0]
-        self.body_offset = torch.tensor(cfg.body_offset, device=self.device)
+        self.body_offset_cmd = torch.tensor(cfg.body_offset, device=self.device)
+        self.body_rot = torch.tensor(cfg.body_rot, device=self.device)
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
@@ -118,15 +120,19 @@ class UniformBodyPoseCommand(CommandTerm):
         )
         body_pos_w = self.robot.data.body_pos_w[:, self.body_idx]
         body_quat_w = self.robot.data.body_quat_w[:, self.body_idx]
+        ee_offset_body = quat_apply(
+            self.body_rot.unsqueeze(0).expand(self.num_envs, -1),
+            self.body_offset_cmd.unsqueeze(0).expand(self.num_envs, -1),
+        )
         target_pos_w = body_pos_w + quat_apply(
-            body_quat_w, self.body_offset.unsqueeze(0).expand(self.num_envs, -1)
+            body_quat_w, ee_offset_body
         )
         # compute the error
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
             self.pose_command_w[:, 3:],
             target_pos_w,
-            body_quat_w,
+            quat_mul(body_quat_w, self.body_rot.unsqueeze(0).expand(self.num_envs, -1)),
         )
         self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
@@ -186,9 +192,17 @@ class UniformBodyPoseCommand(CommandTerm):
         )
         # -- current body pose
         body_link_pose_w = self.robot.data.body_link_pose_w[:, self.body_idx].clone()
+        ee_offset_body = quat_apply(
+            self.body_rot.unsqueeze(0).expand(self.num_envs, -1),
+            self.body_offset_cmd.unsqueeze(0).expand(self.num_envs, -1),
+        )
         body_link_pose_w[:, :3] += quat_apply(
             body_link_pose_w[:, 3:7],
-            self.body_offset.unsqueeze(0).expand(self.num_envs, -1),
+            ee_offset_body,
+        )
+        body_link_pose_w[:, 3:7] = quat_mul(
+            body_link_pose_w[:, 3:7],
+            self.body_rot.unsqueeze(0).expand(self.num_envs, -1),
         )
         self.current_pose_visualizer.visualize(
             body_link_pose_w[:, :3], body_link_pose_w[:, 3:7]

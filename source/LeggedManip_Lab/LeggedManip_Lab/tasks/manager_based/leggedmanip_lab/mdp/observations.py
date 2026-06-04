@@ -79,6 +79,7 @@ def end_effector_link0_relative_pose(
     ee_body_name: str = "end_effector",
     root_body_name: str = "link0",
     ee_local_offset: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    ee_local_rot: tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0),
 ) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
 
@@ -93,6 +94,8 @@ def end_effector_link0_relative_pose(
     link0_quat_w = asset.data.body_quat_w[:, link0_ids[0], :]
     ee_quat_w    = asset.data.body_quat_w[:, ee_ids[0], :]
     ee_offset = torch.tensor(ee_local_offset, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+    ee_local_rot_tensor = torch.tensor(ee_local_rot, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+    ee_offset = quat_apply(ee_local_rot_tensor, ee_offset)
     ee_pos_w = ee_pos_w + quat_apply(ee_quat_w, ee_offset)
 
     # Relative position: transform to link0 frame (not root frame)
@@ -101,7 +104,7 @@ def end_effector_link0_relative_pose(
 
     # Relative orientation: q_rel = q_link0^{-1} * q_ee
     link0_quat_conj = quat_conjugate(link0_quat_w)           # fixed
-    rel_quat = quat_mul(link0_quat_conj, ee_quat_w)
+    rel_quat = quat_mul(link0_quat_conj, quat_mul(ee_quat_w, ee_local_rot_tensor))
 
     return torch.cat([rel_pos, rel_quat], dim=-1)
 

@@ -12,6 +12,7 @@
 LeggedManip_Lab 命名空间下，便于直接注册并训练 WBC/Flat 底层策略。
 """
 
+import math
 from pathlib import Path
 
 import isaaclab.sim as sim_utils
@@ -52,6 +53,9 @@ TRACKING_JOINT_NAMES = LEG_JOINT_NAMES + ARM_TRACKING_JOINT_NAMES
 BASE_BODY_NAME = "base_link"
 EE_BODY_NAME = "gripper_base"
 ARM_ROOT_BODY_NAME = "base_link"
+EE_LOCAL_OFFSET = (0.13, 0.0, 0.0)
+# 将 ee-cmd 坐标系绕 y 轴旋到 gripper_base 坐标系。
+EE_LOCAL_ROT = (math.sqrt(0.5), 0.0, -math.sqrt(0.5), 0.0)
 
 
 def _find_atec_b2_piper_usd() -> str:

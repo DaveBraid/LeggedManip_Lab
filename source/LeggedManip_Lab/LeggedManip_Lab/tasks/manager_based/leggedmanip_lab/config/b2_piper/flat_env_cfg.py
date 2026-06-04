@@ -7,6 +7,8 @@ from LeggedManip_Lab.assets.b2_piper.b2_piper_articulation_cfg import (
     B2_PIPER_CFG,
     BASE_BODY_NAME,
     EE_BODY_NAME,
+    EE_LOCAL_OFFSET,
+    EE_LOCAL_ROT,
     TRACKING_JOINT_NAMES,
 )
 from LeggedManip_Lab.tasks.manager_based.leggedmanip_lab.leggedmanip_lab_env_cfg import *
@@ -32,6 +34,8 @@ class B2PiperFlatEnvCfg(LeggedManipLabEnvCfg):
         )
 
         self.commands.ee_pose.body_name = EE_BODY_NAME
+        self.commands.ee_pose.body_offset = EE_LOCAL_OFFSET
+        self.commands.ee_pose.body_rot = EE_LOCAL_ROT
         self.commands.ee_pose.root_name = ARM_ROOT_BODY_NAME
         self.commands.ee_pose.curriculum_enabled = True
         self.commands.base_velocity.curriculum_enabled = True
@@ -52,6 +56,8 @@ class B2PiperFlatEnvCfg(LeggedManipLabEnvCfg):
         self.observations.critic.joint_vel.params = {"joint_names": TRACKING_JOINT_NAMES}
         self.observations.critic.ee_link0_rel_pose.params = {
             "ee_body_name": EE_BODY_NAME,
+            "ee_local_offset": EE_LOCAL_OFFSET,
+            "ee_local_rot": EE_LOCAL_ROT,
             "root_body_name": ARM_ROOT_BODY_NAME,
         }
 
@@ -60,8 +66,11 @@ class B2PiperFlatEnvCfg(LeggedManipLabEnvCfg):
         self.actions.joint_pos.clip = {".*": (-10.0, 10.0)}
 
         self.rewards.end_effector_position_tracking_exp.params["asset_cfg"].body_names = EE_BODY_NAME
+        self.rewards.end_effector_position_tracking_exp.params["ee_local_offset"] = EE_LOCAL_OFFSET
+        self.rewards.end_effector_position_tracking_exp.params["ee_local_rot"] = EE_LOCAL_ROT
         self.rewards.end_effector_position_tracking_exp.params["root_body_name"] = ARM_ROOT_BODY_NAME
         self.rewards.end_effector_orientation_tracking.params["asset_cfg"].body_names = EE_BODY_NAME
+        self.rewards.end_effector_orientation_tracking.params["ee_local_rot"] = EE_LOCAL_ROT
         self.rewards.track_base_height_exp.params["target_height"] = 0.58
         self.rewards.arm_deviation.params["asset_cfg"].joint_names = ["arm_joint.*"]
 
