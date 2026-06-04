@@ -29,15 +29,15 @@ class WBCCommandsCfg:
         resampling_time_range=(8.0, 10.0),
         debug_vis=True,
         ranges=mdp.command_cfg.UniformPoseWBCCommandCfg.Ranges(
-            pos_x=(0.8, 0.85),
+            pos_x=(0.7, 0.75),
             pos_y=(-0.05, 0.05),
-            pos_z=(0.45, 0.55),
+            pos_z=(0.75, 0.85),
             roll=(-0.0, 0.0),
             pitch=(-0.0, -0.0),
             yaw=(-0.0, -0.0),
         ),
         limit_ranges=mdp.command_cfg.UniformPoseWBCCommandCfg.Ranges(
-            pos_x=(0.8, 1.2),
+            pos_x=(0.7, 1.2),
             pos_y=(-0.25, 0.25),
             pos_z=(0.05, 1.00),
             roll=(-3.14 / 3, 3.14 / 3),
@@ -53,15 +53,15 @@ class WBCCommandsCfg:
         debug_vis=True,
         heading_command=False,
         ranges=mdp.command_cfg.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.2, 0.2),
-            lin_vel_y=(-0.2, 0.2),
-            ang_vel_z=(-0.2, 0.2),
-            heading=(-0.0, 0.0),
-        ),
-        limit_ranges=mdp.command_cfg.UniformVelocityCommandCfg.Ranges(
             lin_vel_x=(-1.0, 1.0),
             lin_vel_y=(-0.6, 0.6),
             ang_vel_z=(-1.0, 1.0),
+            heading=(-0.0, 0.0),
+        ),
+        limit_ranges=mdp.command_cfg.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(-2.0, 2.0),
+            lin_vel_y=(-1.2, 1.2),
+            ang_vel_z=(-2.0, 2.0),
             heading=(-0.0, 0.0),
         ),
     )
@@ -119,7 +119,7 @@ class B2PiperWBCEnvCfg(LeggedManipLabEnvCfg):
         self.rewards.track_lin_vel_xy_exp.weight = 3.5
         self.rewards.track_ang_vel_z_exp.weight = 2.5
         self.rewards.track_base_height_exp.weight = 0.35
-        self.rewards.track_base_height_exp.params["target_height"] = 0.58
+        self.rewards.track_base_height_exp.params["target_height"] = 0.48
         self.rewards.flat_orientation_l2.weight = -0.5
         self.rewards.feet_long_air.weight = -1.0
         self.rewards.air_time_variance.weight = -1.0
