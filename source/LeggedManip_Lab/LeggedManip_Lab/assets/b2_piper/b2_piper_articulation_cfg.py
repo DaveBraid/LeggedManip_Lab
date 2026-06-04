@@ -52,7 +52,6 @@ TRACKING_JOINT_NAMES = LEG_JOINT_NAMES + ARM_TRACKING_JOINT_NAMES
 BASE_BODY_NAME = "base_link"
 EE_BODY_NAME = "gripper_base"
 ARM_ROOT_BODY_NAME = "base_link"
-EE_LOCAL_OFFSET = (0.0, 0.0, 0.13)
 
 
 def _find_atec_b2_piper_usd() -> str:

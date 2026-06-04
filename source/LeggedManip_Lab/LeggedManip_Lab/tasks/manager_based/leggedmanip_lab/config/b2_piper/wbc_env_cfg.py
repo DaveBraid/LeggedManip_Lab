@@ -7,7 +7,6 @@ from LeggedManip_Lab.assets.b2_piper.b2_piper_articulation_cfg import (
     B2_PIPER_CFG,
     BASE_BODY_NAME,
     EE_BODY_NAME,
-    EE_LOCAL_OFFSET,
     TRACKING_JOINT_NAMES,
 )
 from LeggedManip_Lab.tasks.manager_based.leggedmanip_lab.leggedmanip_lab_env_cfg import *
@@ -22,24 +21,23 @@ class WBCCommandsCfg:
     ee_pose = mdp.command_cfg.UniformPoseWBCCommandCfg(
         asset_name="robot",
         body_name=EE_BODY_NAME,
-        body_offset=EE_LOCAL_OFFSET,
         link_name=ARM_ROOT_BODY_NAME,
         resampling_time_range=(8.0, 10.0),
         debug_vis=True,
         ranges=mdp.command_cfg.UniformPoseWBCCommandCfg.Ranges(
-            pos_x=(0.55, 0.65),
+            pos_x=(0.4, 0.5),
             pos_y=(-0.05, 0.05),
-            pos_z=(0.50, 0.60),
+            pos_z=(0.85, 0.95),
             roll=(-0.0, 0.0),
             pitch=(-0.0, -0.0),
             yaw=(-0.0, -0.0),
         ),
         limit_ranges=mdp.command_cfg.UniformPoseWBCCommandCfg.Ranges(
-            pos_x=(0.5, 1.2),
-            pos_y=(-0.35, 0.35),
-            pos_z=(0.00, 1.00),
-            roll=(-3.14 / 2, 3.14 / 2),
-            pitch=(-3.14 / 2, 3.14 / 2),
+            pos_x=(0.3, 0.75),
+            pos_y=(-0.25, 0.25),
+            pos_z=(0.05, 1.00),
+            roll=(-3.14 / 3, 3.14 / 3),
+            pitch=(-3.14 / 4, 3.14 / 4),
             yaw=(-3.14 / 6, 3.14 / 6),
         ),
     )
@@ -96,7 +94,6 @@ class B2PiperWBCEnvCfg(LeggedManipLabEnvCfg):
         self.observations.critic.joint_vel.params = {"joint_names": TRACKING_JOINT_NAMES}
         self.observations.critic.ee_link0_rel_pose.params = {
             "ee_body_name": EE_BODY_NAME,
-            "ee_local_offset": EE_LOCAL_OFFSET,
             "root_body_name": ARM_ROOT_BODY_NAME,
         }
 
@@ -107,14 +104,13 @@ class B2PiperWBCEnvCfg(LeggedManipLabEnvCfg):
         self.rewards.end_effector_position_tracking_exp.func = mdp.position_command_error_exp
         self.rewards.end_effector_position_tracking_exp.weight = 4.5
         self.rewards.end_effector_position_tracking_exp.params["asset_cfg"].body_names = EE_BODY_NAME
-        self.rewards.end_effector_position_tracking_exp.params["ee_local_offset"] = EE_LOCAL_OFFSET
         self.rewards.end_effector_position_tracking_exp.params["link0_name"] = ARM_ROOT_BODY_NAME
         self.rewards.end_effector_orientation_tracking.weight = -4.0
         self.rewards.end_effector_orientation_tracking.params["asset_cfg"].body_names = EE_BODY_NAME
         self.rewards.track_lin_vel_xy_exp.weight = 3.5
         self.rewards.track_ang_vel_z_exp.weight = 2.5
         self.rewards.track_base_height_exp.weight = 0.35
-        self.rewards.track_base_height_exp.params["target_height"] = 0.48
+        self.rewards.track_base_height_exp.params["target_height"] = 0.58
         self.rewards.flat_orientation_l2.weight = -0.5
         self.rewards.feet_long_air.weight = -1.0
         self.rewards.air_time_variance.weight = -1.0
