@@ -66,6 +66,7 @@ class UniformPoseWBCCommand(CommandTerm):
 
         self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
         self.link0_idx = self.robot.find_bodies(cfg.link_name)[0][0]
+        self.body_offset = torch.tensor(cfg.body_offset, device=self.device)
 
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
@@ -100,6 +101,10 @@ class UniformPoseWBCCommand(CommandTerm):
 
     def _update_metrics(self):
         ee_pos_w = self.robot.data.body_pos_w[:, self.body_idx]
+        ee_quat_w = self.robot.data.body_state_w[:, self.body_idx, 3:7]
+        ee_pos_w = ee_pos_w + quat_apply(
+            ee_quat_w, self.body_offset.unsqueeze(0).expand(self.num_envs, -1)
+        )
         link0_pos_w = self.robot.data.body_pos_w[:, self.link0_idx]
         link0_quat_w = self.robot.data.body_state_w[:, self.link0_idx, 3:7]
         end_effector_curr_pos_link0 = quat_apply_inverse(
@@ -111,7 +116,7 @@ class UniformPoseWBCCommand(CommandTerm):
         pos_error = torch.cat([ee_pos_xy_err, ee_pos_z_err], dim=-1)
 
         des_quat_w = quat_mul(link0_quat_w, self.pose_command[:, 3:7])
-        curr_quat_w = self.robot.data.body_state_w[:, self.body_idx, 3:7]  # type: ignore
+        curr_quat_w = ee_quat_w
         source_quat_norm = quat_mul(des_quat_w, quat_conjugate(des_quat_w))[:, 0]
         source_quat_inv = quat_conjugate(des_quat_w) / source_quat_norm.unsqueeze(-1)
         quat_error = quat_mul(curr_quat_w, source_quat_inv)
@@ -226,5 +231,9 @@ class UniformPoseWBCCommand(CommandTerm):
 
         self.goal_pose_visualizer.visualize(self.pose_command_w[:, :3], self.pose_command_w[:, 3:])
 
-        body_pose_w = self.robot.data.body_state_w[:, self.body_idx]
+        body_pose_w = self.robot.data.body_state_w[:, self.body_idx].clone()
+        body_pose_w[:, :3] += quat_apply(
+            body_pose_w[:, 3:7],
+            self.body_offset.unsqueeze(0).expand(self.num_envs, -1),
+        )
         self.current_pose_visualizer.visualize(body_pose_w[:, :3], body_pose_w[:, 3:7])

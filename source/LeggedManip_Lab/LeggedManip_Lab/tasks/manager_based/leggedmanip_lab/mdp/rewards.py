@@ -26,6 +26,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
 from isaaclab.utils.math import (
     combine_frame_transforms,
+    quat_apply,
     quat_error_magnitude,
     quat_mul,
     quat_apply_inverse,
@@ -41,7 +42,12 @@ if TYPE_CHECKING:
 
 
 def position_command_b_error_exp(
-    env: ManagerBasedRLEnv, command_name: str, std: float, asset_cfg: SceneEntityCfg
+    env: ManagerBasedRLEnv,
+    command_name: str,
+    std: float,
+    asset_cfg: SceneEntityCfg,
+    root_body_name: str = "link0",
+    ee_local_offset: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> torch.Tensor:
     """Reward end-effector position tracking in the robot's body frame (link0 frame)
     using an exponential kernel.
@@ -51,11 +57,12 @@ def position_command_b_error_exp(
     """
     asset: RigidObject = env.scene[asset_cfg.name]
     command = env.command_manager.get_command(command_name)
-    root_idx = asset.find_bodies("link0")[0][0]
-    end_effector_curr_pos_b = (
-        asset.data.body_pos_w[:, asset_cfg.body_ids[0]]
-        - asset.data.body_pos_w[:, root_idx]
-    )
+    root_idx = asset.find_bodies(root_body_name)[0][0]
+    ee_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids[0]]
+    ee_quat_w = asset.data.body_quat_w[:, asset_cfg.body_ids[0]]
+    ee_offset = torch.tensor(ee_local_offset, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+    ee_pos_w = ee_pos_w + quat_apply(ee_quat_w, ee_offset)
+    end_effector_curr_pos_b = ee_pos_w - asset.data.body_pos_w[:, root_idx]
     end_effector_curr_pos_b = quat_apply_inverse(
         asset.data.body_quat_w[:, root_idx], end_effector_curr_pos_b
     )
@@ -69,6 +76,7 @@ def position_command_error_exp(
     std: float,
     asset_cfg: SceneEntityCfg,
     link0_name: str = "link0",
+    ee_local_offset: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> torch.Tensor:
     """Reward end-effector position tracking in a mixed coordinate frame.
 
@@ -82,6 +90,9 @@ def position_command_error_exp(
     command = env.command_manager.get_command(command_name)
 
     ee_pos_w = asset.data.body_pos_w[:, ee_id]
+    ee_quat_w = asset.data.body_quat_w[:, ee_id]
+    ee_offset = torch.tensor(ee_local_offset, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+    ee_pos_w = ee_pos_w + quat_apply(ee_quat_w, ee_offset)
     link0_pos_w = asset.data.body_pos_w[:, link0_id]
     link0_quat_w = asset.data.body_quat_w[:, link0_id]
 

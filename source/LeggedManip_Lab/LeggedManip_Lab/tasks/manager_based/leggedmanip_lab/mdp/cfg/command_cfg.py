@@ -35,6 +35,7 @@ class UniformPoseCommandCfg(UniformPoseCommandBaseCfg):
     """The range limit """
     curriculum_enabled: bool = False
     root_name: str = "link0"
+    body_offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
 @configclass
 class UniformPoseWBCCommandCfg(UniformPoseCommandBaseCfg):
@@ -48,6 +49,7 @@ class UniformPoseWBCCommandCfg(UniformPoseCommandBaseCfg):
     link_name: str = "link0"
     """The name of the root body, which serves as the reference frame for the command."""
     curriculum_enabled: bool = False
+    body_offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
 
 # -- velocity

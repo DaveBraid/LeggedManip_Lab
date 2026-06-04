@@ -36,7 +36,7 @@ from isaaclab.envs.utils.io_descriptors import (
     record_joint_vel_offsets,
     record_shape,
 )
-from isaaclab.utils.math import quat_apply_inverse, quat_conjugate, quat_mul
+from isaaclab.utils.math import quat_apply, quat_apply_inverse, quat_conjugate, quat_mul
 
 
 # ---------------------------------------------------------------------------
@@ -76,11 +76,14 @@ def base_lin_vel(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCf
 def end_effector_link0_relative_pose(
     env: ManagerBasedEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    ee_body_name: str = "end_effector",
+    root_body_name: str = "link0",
+    ee_local_offset: tuple[float, float, float] = (0.0, 0.0, 0.0),
 ) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
 
-    ee_ids, _ = asset.find_bodies("end_effector")
-    link0_ids, _ = asset.find_bodies("link0")
+    ee_ids, _ = asset.find_bodies(ee_body_name)
+    link0_ids, _ = asset.find_bodies(root_body_name)
 
     if len(ee_ids) == 0 or len(link0_ids) == 0:
         return torch.zeros((env.num_envs, 7), device=env.device)
@@ -89,6 +92,8 @@ def end_effector_link0_relative_pose(
     link0_pos_w = asset.data.body_pos_w[:, link0_ids[0], :]
     link0_quat_w = asset.data.body_quat_w[:, link0_ids[0], :]
     ee_quat_w    = asset.data.body_quat_w[:, ee_ids[0], :]
+    ee_offset = torch.tensor(ee_local_offset, device=env.device).unsqueeze(0).expand(env.num_envs, -1)
+    ee_pos_w = ee_pos_w + quat_apply(ee_quat_w, ee_offset)
 
     # Relative position: transform to link0 frame (not root frame)
     rel_pos_w = ee_pos_w - link0_pos_w

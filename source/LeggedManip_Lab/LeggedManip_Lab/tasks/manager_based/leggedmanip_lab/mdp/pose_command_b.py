@@ -26,6 +26,7 @@ from isaaclab.markers import VisualizationMarkers
 from isaaclab.utils.math import (
     combine_frame_transforms,
     compute_pose_error,
+    quat_apply,
     quat_from_euler_xyz,
     quat_unique,
 )
@@ -71,6 +72,7 @@ class UniformBodyPoseCommand(CommandTerm):
         self.robot: Articulation = env.scene[cfg.asset_name]
         self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
         self.root_idx = self.robot.find_bodies(cfg.root_name)[0][0]
+        self.body_offset = torch.tensor(cfg.body_offset, device=self.device)
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
@@ -114,12 +116,17 @@ class UniformBodyPoseCommand(CommandTerm):
                 self.pose_command_b[:, 3:],
             )
         )
+        body_pos_w = self.robot.data.body_pos_w[:, self.body_idx]
+        body_quat_w = self.robot.data.body_quat_w[:, self.body_idx]
+        target_pos_w = body_pos_w + quat_apply(
+            body_quat_w, self.body_offset.unsqueeze(0).expand(self.num_envs, -1)
+        )
         # compute the error
         pos_error, rot_error = compute_pose_error(
             self.pose_command_w[:, :3],
             self.pose_command_w[:, 3:],
-            self.robot.data.body_pos_w[:, self.body_idx],
-            self.robot.data.body_quat_w[:, self.body_idx],
+            target_pos_w,
+            body_quat_w,
         )
         self.metrics["position_error"] = torch.norm(pos_error, dim=-1)
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
@@ -178,7 +185,11 @@ class UniformBodyPoseCommand(CommandTerm):
             self.pose_command_w[:, :3], self.pose_command_w[:, 3:]
         )
         # -- current body pose
-        body_link_pose_w = self.robot.data.body_link_pose_w[:, self.body_idx]
+        body_link_pose_w = self.robot.data.body_link_pose_w[:, self.body_idx].clone()
+        body_link_pose_w[:, :3] += quat_apply(
+            body_link_pose_w[:, 3:7],
+            self.body_offset.unsqueeze(0).expand(self.num_envs, -1),
+        )
         self.current_pose_visualizer.visualize(
             body_link_pose_w[:, :3], body_link_pose_w[:, 3:7]
         )
